@@ -1,23 +1,20 @@
 package com.kitofuyu.libtumblr;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpParams;
+import org.apache.http.message.BasicNameValuePair;
 
-import com.kitofuyu.libtumblr.util.util;
+import com.kitofuyu.libtumblr.exceptions.LibTumblrException;
+import com.kitofuyu.libtumblr.request.RequestBuilder;
+import com.kitofuyu.libtumblr.resources.Blog;
+import com.kitofuyu.libtumblr.resources.Meta;
+import com.kitofuyu.libtumblr.resources.Post;
+import com.kitofuyu.libtumblr.resources.User;
 import com.kitofuyu.libtumblr.xauth.XAuthProvider;
 
 import oauth.signpost.OAuthConsumer;
@@ -26,12 +23,12 @@ import oauth.signpost.exception.OAuthCommunicationException;
 import oauth.signpost.exception.OAuthExpectationFailedException;
 import oauth.signpost.exception.OAuthMessageSignerException;
 import oauth.signpost.exception.OAuthNotAuthorizedException;
-import oauth.signpost.http.HttpParameters;
 
 public class Tumblr {
 
     private final String API_URI = "http://api.tumblr.com/v2";
         private OAuthConsumer consumer;
+        private RequestBuilder requestBuilder;
         private XAuthProvider provider = new XAuthProvider(
                     "http://www.tumblr.com/oauth/request_token",
                     "https://www.tumblr.com/oauth/access_token",
@@ -41,10 +38,10 @@ public class Tumblr {
         private String consumerSecret;
         private String apiKey;
         private boolean authorized;
-        HttpClient client;
+
          
          /**
-         * create instance of Tumblr client ( not authorized) 
+         * create instance of Tumblr client (not authorized) 
          * @param consumerKey 
          * @param consumerSecret client application's consumer secret key
           */
@@ -54,14 +51,14 @@ public class Tumblr {
             this.apiKey = consumerKey;
             this.authorized = false;
             this.consumer = new CommonsHttpOAuthConsumer(consumerKey, consumerSecret);
-            this.client = new DefaultHttpClient();
+            requestBuilder = new RequestBuilder();
          }
         /**
          * create instance of authorized Tumblr client 
         * @param consumerKey client application's consumer key
         * @param consumerSecret client application's consumer secret key
         * @param oauthToken authorized OAuth token
-        * @param tokenSecret authorized OAuth secret token
+        * @param tokenSecret authorized OAuth      secret token
          */
         public Tumblr(String consumerKey, String consumerSecret, String oauthToken, String tokenSecret) {
             this.consumerKey = consumerKey;
@@ -71,6 +68,8 @@ public class Tumblr {
             this.apiKey = consumerKey;
             this.authorized = true;
             consumer.setTokenWithSecret(oauthToken, tokenSecret);
+            requestBuilder = new RequestBuilder();
+            requestBuilder.setConsumer(consumer);
         }
         
         /**
@@ -119,180 +118,95 @@ public class Tumblr {
          * send user name and password to retrieve access token
          * @param username name of account on Tumblr ( this is should be user's mail address )
          * @param password password
-         * @throws IOException 
-         * @throws OAuthNotAuthorizedException 
-         * @throws ClientProtocolException 
-         * @throws OAuthCommunicationException 
-         * @throws OAuthExpectationFailedException 
-         * @throws OAuthMessageSignerException 
          */
-        public void authorize(String username, String password) throws OAuthMessageSignerException, OAuthExpectationFailedException, 
-                                                                       OAuthCommunicationException, ClientProtocolException,
-                                                                       OAuthNotAuthorizedException, IOException {
-            this.provider.retrieveAccessToken(consumer, username, password);
-            this.authorized = true;
-        }
-        
-        /**
-         * call GET API (OAuth)
-         * @param uri API uri (includes any options)
-         * @return 
-         * @throws OAuthMessageSignerException
-         * @throws OAuthExpectationFailedException
-         * @throws OAuthCommunicationException
-         * @throws ClientProtocolException
-         * @throws IOException
-         * @throws OAuthNotAuthorizedException
-         */
-        private String OAuthGet(String uri) throws OAuthMessageSignerException, OAuthExpectationFailedException,
-                                                   OAuthCommunicationException, ClientProtocolException,
-                                                   IOException, OAuthNotAuthorizedException {
-            HttpGet request = new HttpGet(uri);
-            consumer.sign(request);
-            HttpResponse response = client.execute(request);
-            util.checkHttpResponseCode(response);
-            return util.convertToString(response.getEntity().getContent());
-        }
-        
-        /**
-         * call GET API (API key)
-         * @param uri (includes any options)
-         * @return
-         * @throws ClientProtocolException
-         * @throws IOException
-         * @throws OAuthNotAuthorizedException
-         * @throws OAuthCommunicationException
-         */
-        private String APIkeyGet(String uri) throws ClientProtocolException, IOException, 
-                                                    OAuthNotAuthorizedException, OAuthCommunicationException {
-            HttpGet request = new HttpGet(uri);
-            HttpResponse response = client.execute(request);
-            util.checkHttpResponseCode(response);
-            return util.convertToString(response.getEntity().getContent());
+        public void authorize(String username, String password) {
             
+            try {
+                this.provider.retrieveAccessToken(consumer, username, password);
+            } catch (OAuthExpectationFailedException e) {
+                throw new LibTumblrException(e.getMessage(), e);
+            } catch (OAuthNotAuthorizedException e) {
+                throw new LibTumblrException(e.getMessage(), e);
+            } catch (OAuthCommunicationException e) {
+                throw new LibTumblrException(e.getMessage(), e);
+            } catch (OAuthMessageSignerException e) {
+                throw new LibTumblrException(e.getMessage(), e);
+            } catch (IOException e) {
+                throw new LibTumblrException(e.getMessage(), e);
+             }
+            this.authorized = true;
+            requestBuilder.setConsumer(consumer);
         }
         
-        /**
-         * call GET API (Anybody can query the method)
-         * @param uri (includes any options)
-         * @return
-         * @throws ClientProtocolException
-         * @throws IOException
-         */
-        private String Get(String uri) throws ClientProtocolException, IOException {
-            HttpGet request = new HttpGet(uri);
-            HttpParams params = new BasicHttpParams();
-            params.setParameter("http.protocol.handle-redirects", false);
-            request.setParams(params);
-            HttpResponse response = client.execute(request);
-            return util.convertToString(response.getEntity().getContent());
-        }
-        /**
-         * call POST API (OAuth)
-         * @param uri (includes any options)
-         * @param params request parameters
-         * @return
-         * @throws OAuthMessageSignerException
-         * @throws OAuthExpectationFailedException
-         * @throws OAuthCommunicationException
-         * @throws IllegalStateException
-         * @throws IOException
-         */
-        private String OAuthPost(String uri, List<? extends NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException,
-                                                                                           OAuthCommunicationException, IllegalStateException, 
-                                                                                           IOException {
-            HttpPost request = new HttpPost(uri);
-            UrlEncodedFormEntity entity = new UrlEncodedFormEntity(params, "UTF-8");
-            request.setEntity(entity);
-            consumer.sign(request);
-            HttpResponse response = client.execute(request);
-            return util.convertToString(response.getEntity().getContent());
-            }
+        
+
         
         /**
          * retrieve a Blog Information
-         * @param blogHostname
+         * @param blogHostname                    
          * @return
-         * @throws OAuthMessageSignerException
-         * @throws OAuthExpectationFailedException
-         * @throws OAuthCommunicationException
-         * @throws ClientProtocolException
-         * @throws OAuthNotAuthorizedException
-         * @throws IOException
          */
-        public String retrieveBlogInfo(String blogHostname) throws OAuthMessageSignerException, OAuthExpectationFailedException, 
-                                                                   OAuthCommunicationException, ClientProtocolException,
-                                                                   OAuthNotAuthorizedException, IOException {
+        public Blog retrieveBlogInfo(String blogHostname) {
             String uri = this.API_URI + "/blog/" + blogHostname + "/info" + "?api_key=" + apiKey;
-            return this.APIkeyGet(uri);
+            return requestBuilder.APIkeyGet(uri).getBlog();
         }
         /**
          * retrieve a Blog Avatar
          * @param blogHostname
          * @param size The size of the avatar. Must be one of the values : 0,16, 24, 30, 40, 48, 64, 96, 128, 512
          *             (0 means default size : 64)
-         * @return
-         * @throws OAuthMessageSignerException
-         * @throws OAuthExpectationFailedException
-         * @throws OAuthCommunicationException
-         * @throws ClientProtocolException
-         * @throws OAuthNotAuthorizedException
-         * @throws IOException
          */
-        public String retriveBlogAvatar(String blogHostname, int size) throws ClientProtocolException, IOException {
+        public String retriveBlogAvatar(String blogHostname, int size) {
             String uri = this.API_URI + "/blog/" + blogHostname + "/avater";
             if (size != 0) {
                 uri = uri + "/size/" + size;
               }
-            return this.Get(uri);
+            return requestBuilder.Get(uri);
          }
         
         /**
          *  retrieve a Blog Avatar (default size)
          * @param blogHostname
          * @return
-         * @throws ClientProtocolException
-         * @throws IOException
+
          */
-        public String retriveBlogAvatar(String blogHostname) throws  ClientProtocolException, IOException {
+        public String retriveBlogAvatar(String blogHostname) {
             return this.retriveBlogAvatar(blogHostname, 0);
-        }
+         }
         
         /**
          * retrieve blog's followers
          * @param blogName
          * @return
-         * @throws OAuthMessageSignerException
-         * @throws OAuthExpectationFailedException
-         * @throws OAuthCommunicationException
-         * @throws ClientProtocolException
-         * @throws IOException
-         * @throws OAuthNotAuthorizedException
          */
-        public String retrieveFollowers(String blogName) throws OAuthMessageSignerException, OAuthExpectationFailedException,
-                                                           OAuthCommunicationException, ClientProtocolException,
-                                                           IOException, OAuthNotAuthorizedException {
+        public List<User> retrieveFollowers(String blogName) {
             String uri = this.API_URI + "/blog/" + blogName + "/followers";
             System.out.println(uri);
-            return this.OAuthGet(uri);
+            return requestBuilder.OAuthGet(uri).getUsers();
         }
         
-        
-        public String retrieveDashboard(Map<String, String> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, ClientProtocolException, OAuthNotAuthorizedException, IOException {
+        /**
+         * retrieve Dashboard
+         * @param params API parameters Map 
+         * @return
+         */
+        public List<Post> retrieveDashboard(Map<String, String> params) {
             String uri = this.API_URI + "/user/dashboard";
             uri = constructQueryURI(uri, params);
-            return OAuthGet(uri);
+            return requestBuilder.OAuthGet(uri).getPosts();
         }
-        public String retrieveDashboard() throws OAuthMessageSignerException, OAuthExpectationFailedException,
-                                                 OAuthCommunicationException, ClientProtocolException,
-                                                 OAuthNotAuthorizedException, IOException {
+        public List<Post> retrieveDashboard() {
             return retrieveDashboard(null);
         }
         
-        public String retrieveDashboard(int limit, int offset, boolean notes_info )
-                throws OAuthMessageSignerException, OAuthExpectationFailedException,
-                       OAuthCommunicationException, ClientProtocolException,
-                       OAuthNotAuthorizedException, IOException {
+        /**
+         * retrieve Dashboard
+         * @param limit the number of results : 1 ... 20
+         * @param offset post number to start at
+         * @param notes_info Indicates whether to return notes information (specify true or false). Returns note count and note metadata. 
+         * @return
+         */
+        public List<Post> retrieveDashboard(int limit, int offset, boolean notes_info ) {
            Map<String, String> params = new HashMap<String, String>();
            params.put("limit", String.valueOf(limit));
            params.put("offset", String.valueOf(offset));
@@ -301,6 +215,40 @@ public class Tumblr {
              }
            
            return retrieveDashboard(params);
+        }
+        
+        /**
+         * reblg the post
+         * @param blogName blog hostname the post is in
+         * @param id the id of the post
+         * @param reblogKey the reblog key of the post
+         * @param options additional options
+         * @return
+         */
+        public Meta reblog(String blogName, Long id, String reblogKey, Map<String, String> options) {
+            String uri = this.API_URI + "/blog/" + blogName + "/post/reblog";
+            
+            List<NameValuePair> params = new ArrayList<NameValuePair>(); 
+            if (options != null) {
+                for (String key : options.keySet()) {
+                    params.add(new BasicNameValuePair(key, options.get(key)));
+                  }
+                }
+            
+            params.add(new BasicNameValuePair("id", String.valueOf(id)));
+            params.add(new BasicNameValuePair("reblog_key", reblogKey));
+            
+           return requestBuilder.OAuthPost(uri, params).getMeta();
+        }
+        
+        /**
+         * reblog the post
+         * @param blogName blogName blog hostname the post is in
+         * @param post reblogged 
+         * @return
+         */
+        public Meta reblog(String blogName, Post post) {
+            return reblog(blogName, post.getId(), post.getReblog_key(), null);
         }
         
         private String constructQueryURI(String baseURI, Map<String,?> params) {

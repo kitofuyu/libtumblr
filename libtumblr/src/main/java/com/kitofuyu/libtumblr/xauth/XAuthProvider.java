@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
@@ -34,13 +33,7 @@ public class XAuthProvider {
     
     
     public synchronized void retrieveAccessToken(OAuthConsumer consumer,
-                                                String username,
-                                                String password) 
-                                                        throws OAuthMessageSignerException, 
-                                                        OAuthExpectationFailedException, 
-                                                        OAuthCommunicationException, 
-                                                        ClientProtocolException,
-                                                        IOException, OAuthNotAuthorizedException  {
+                                                String username,String password) throws OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthCommunicationException, IOException, OAuthMessageSignerException  {
         
         ArrayList<BasicNameValuePair> xauth_params = new ArrayList<BasicNameValuePair>();
         xauth_params.add(new BasicNameValuePair(XAuth.XAUTH_MODE, XAuth.CLIENT_AUTH));
@@ -66,7 +59,7 @@ public class XAuthProvider {
               
             consumer.setTokenWithSecret(tokens[0], tokens[1]);
          } catch (UnsupportedEncodingException e) {
-             throw new OAuthNotAuthorizedException("URL encode failed.");
+             throw new OAuthExpectationFailedException("URL encode failed.");
           }
     }
 }

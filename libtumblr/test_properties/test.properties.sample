@@ -1,0 +1,12 @@
+##Rename this file ex. test.properties
+
+# Tumblr Consumer Key
+consumerKey = XXXX
+# Tumblr Consumer Secret Key
+consumerSecret = YYYY
+# User name
+userName = user@example.com
+# Password
+passWord = password
+# blog hostname reblog to
+reblogTo = bloghostname.example.com
