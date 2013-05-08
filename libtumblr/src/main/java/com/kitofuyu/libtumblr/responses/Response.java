@@ -59,6 +59,10 @@ public class Response {
         return get(responseField, "users", new TypeToken<List<User>>(){}.getType());
     }
     
+    public List<Post> getLikedPosts() {
+        parseResponseField();
+        return get(responseField, "liked_posts", new TypeToken<List<Post>>(){}.getType());
+    }
     private void parseResponseField() {
         JsonObject jobject = response.getAsJsonObject();
         responseField = jobject.get("response");

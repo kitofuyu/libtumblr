@@ -195,6 +195,11 @@ public class Tumblr {
             uri = constructQueryURI(uri, params);
             return requestBuilder.OAuthGet(uri).getPosts();
         }
+        
+        /**
+         * retrieve Dashboard
+         * @return
+         */
         public List<Post> retrieveDashboard() {
             return retrieveDashboard(null);
         }
@@ -215,6 +220,38 @@ public class Tumblr {
              }
            
            return retrieveDashboard(params);
+        }
+        
+        /**
+         * retrieve user's liked posts
+         * @param params API parameters Map
+         * @return list of liked posts
+         */
+        public List<Post> retrieveLikes(Map<String, String> params) {
+            String uri = this.API_URI + "/user/likes";
+            uri = constructQueryURI(uri,  params);
+            return requestBuilder.OAuthGet(uri).getLikedPosts();
+        }
+        
+        /**
+         * retrieve user's liked posts
+         * @param limit the number of results to return : 1-20
+         * @param offset liked post number to start
+         * @return list of liked posts
+         */
+        public List<Post> retrieveLikes(int limit, int offset) {
+            Map<String, String> params = new HashMap<String, String>();
+            params.put("limit", String.valueOf(limit));
+            params.put("offset", String.valueOf(offset));
+            return retrieveLikes(params);
+        }
+        
+        /**
+         * retrieve user's liked posts
+         * @return list of liked posts
+         */
+        public List<Post> retrieveLikes() {
+            return retrieveLikes(null);
         }
         
         /**
@@ -244,13 +281,37 @@ public class Tumblr {
         /**
          * reblog the post
          * @param blogName blogName blog hostname the post is in
-         * @param post reblogged 
+         * @param post the post you want to reblog
          * @return
          */
         public Meta reblog(String blogName, Post post) {
             return reblog(blogName, post.getId(), post.getReblog_key(), null);
         }
         
+        /**
+         * like the post
+         * @param id the id of the post
+         * @param reblogKey the reblog key of the post
+         * @return 200: OK (post successfully liked ) or a 404 (post id or reblog_key was not found)
+         */
+        public Meta like(long id, String reblogKey) {
+            String uri = this.API_URI + "/user/like";
+            List<NameValuePair> params = new ArrayList<NameValuePair>();
+            params.add(new BasicNameValuePair("id", String.valueOf(id)));
+            params.add(new BasicNameValuePair("reblog_key", reblogKey));
+            
+            return requestBuilder.OAuthPost(uri, params).getMeta();
+        }
+        
+        /**
+         * like the post
+         * @param post the post you want to like
+         * @return 200: OK (blog successfully unfollowed) or a 404 (blog was not found)
+         */
+        public Meta like(Post post) {
+            return like(post.getId(), post.getReblog_key());
+        }
+                
         private String constructQueryURI(String baseURI, Map<String,?> params) {
             StringBuilder builder = new StringBuilder(baseURI);
             if (params != null) {
