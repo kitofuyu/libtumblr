@@ -27,8 +27,6 @@ public class QuoteTest {
         BufferedReader br = new BufferedReader(fr);
         JsonParser parser = new JsonParser();
         JsonElement jelement = parser.parse(br);
-        JsonObject jobject = jelement.getAsJsonObject();
-        jelement = jobject.get("response");
         response =  new Response(jelement);
         br.close();
         fr.close();

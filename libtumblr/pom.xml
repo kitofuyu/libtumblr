@@ -6,9 +6,8 @@
   <artifactId>libtumblr</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <packaging>jar</packaging>
-
   <name>libtumblr</name>
-  <url>http://maven.apache.org</url>
+  <url>http://github.com/kitofuyu/libtumblr</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -34,4 +33,30 @@
         <scope>compile</scope>
     </dependency>
   </dependencies>
+  <build>
+      <plugins>
+           <plugin>
+               <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+          </execution>
+        </executions>
+           </plugin>
+          <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-jar-plugin</artifactId>
+              <configuration>
+                  <excluds>
+                      <exclude>/json</exclude>
+                      <exclude>/test_properties</exclude>
+                  </excluds>
+              </configuration>
+          </plugin>
+      </plugins>
+  </build>
 </project>

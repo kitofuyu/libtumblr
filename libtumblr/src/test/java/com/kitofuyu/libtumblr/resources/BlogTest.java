@@ -11,7 +11,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.kitofuyu.libtumblr.responses.Response;
 
@@ -26,8 +25,6 @@ public class BlogTest {
         BufferedReader br = new BufferedReader(fr);
         JsonParser parser = new JsonParser();
         JsonElement jelement = parser.parse(br);
-        JsonObject jobject = jelement.getAsJsonObject();
-        jelement = jobject.get("response");
         response =  new Response(jelement);
         br.close();
         fr.close();
